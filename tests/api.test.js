@@ -4,13 +4,27 @@ import { mkdtemp, rm, writeFile, readFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { once } from 'node:events';
-import { createApp } from '../server/app.js';
+import { createServer } from 'node:http';
+import { Readable } from 'node:stream';
+import { createHandlers } from '../server/http.js';
 import { profiles, incomingLikes, publicProfile } from '../server/profiles.js';
 
 async function fixture(t, dataFile) {
   const folder = dataFile ? null : await mkdtemp(path.join(os.tmpdir(), 'coy-test-'));
   const file = dataFile || path.join(folder, 'state.json');
-  const server = createApp({ dataFile: file }).listen(0, '127.0.0.1');
+  const handlers = createHandlers(file);
+  // Exercise the same Web Request/Response handlers exported by Next.js routes.
+  const server = createServer(async (incoming, outgoing) => {
+    const url = new URL(incoming.url, `http://${incoming.headers.host}`);
+    const route = { '/feed': handlers.feed, '/swipe': handlers.swipe, '/matches': handlers.matches }[url.pathname];
+    const request = new Request(url, {
+      method: incoming.method, headers: incoming.headers,
+      ...(incoming.method === 'POST' ? { body: Readable.toWeb(incoming), duplex: 'half' } : {}),
+    });
+    const response = await route(request);
+    outgoing.writeHead(response.status, Object.fromEntries(response.headers));
+    outgoing.end(Buffer.from(await response.arrayBuffer()));
+  }).listen(0, '127.0.0.1');
   await once(server, 'listening');
   const url = `http://127.0.0.1:${server.address().port}`;
   t.after(async () => { await new Promise(resolve => server.close(resolve)); if (folder) await rm(folder, { recursive: true, force: true }); });
@@ -76,6 +90,24 @@ test('invalid actions, malformed JSON and nonexistent profiles change no data', 
   }
   assert.equal((await request('/swipe', { profileId: 'missing', action: 'like' })).status, 404);
   assert.equal((await request('/feed')).body.profiles.length, profiles.length);
+});
+
+test('oversized and non-object JSON requests are rejected without recording a swipe', async t => {
+  const { request } = await fixture(t);
+  assert.equal((await request('/swipe', { profileId: 'p01', action: 'like', extra: 'x'.repeat(8192) })).status, 413);
+  for (const body of ['null', '[]', '"like"']) assert.equal((await request('/swipe', body)).status, 400);
+  assert.equal((await request('/feed')).body.profiles.length, profiles.length);
+  assert.deepEqual((await request('/matches')).body.matches, []);
+});
+
+test('Next.js health route returns JSON and prevents response caching', async () => {
+  const { GET } = await import('../app/health/route.js');
+  const response = await GET(new Request('http://localhost/health'));
+  assert.equal(response.status, 200);
+  assert.deepEqual(await response.json(), { status: 'ok' });
+  assert.equal(response.headers.get('cache-control'), 'no-store');
+  assert.equal(response.headers.get('x-content-type-options'), 'nosniff');
+  assert.ok(response.headers.get('content-type').includes('application/json'));
 });
 
 test('a conflicting repeat returns 409 and cannot change a pass into a like', async t => {

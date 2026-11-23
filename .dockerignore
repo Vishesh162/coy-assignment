@@ -1,6 +1,9 @@
 node_modules
 dist
+.next
+out
 data
 .git
 .taste-skill
 work
+.env*

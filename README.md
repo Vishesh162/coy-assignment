@@ -2,7 +2,7 @@
 
 A standalone, mobile-first Discover experience for the Coy SDE Intern Assignment. The Home tab intentionally stays blank. All discovery and matching features live in Discover.
 
-Built with **React, Vite, Node.js, and Express**. The assignment permits React and Express; this implementation uses that option rather than Next.js. No signup, API keys, external auth, or paid services are needed. One logged-in user is assumed.
+Built with **React 19 and Next.js 16**. The frontend is a React client component; the backend uses **Next.js App Router route handlers** running on Node.js. Swipes and matches are stored in a JSON file. No signup, API keys, external auth, or paid services are needed. One logged-in user is assumed.
 
 ## Run locally
 
@@ -13,7 +13,7 @@ npm ci
 npm run dev
 ```
 
-Open **http://localhost:5173**. The API runs on port 3107, and Vite forwards API requests to it. Keep both ports free. If you override `PORT`, also update the proxy target in `vite.config.js` for development.
+Open **http://localhost:5173**. Next.js serves both the React frontend and the backend routes on this one port. There is no separate Express server or development proxy.
 
 To run the production version:
 
@@ -22,7 +22,7 @@ npm run build
 npm start
 ```
 
-Open **http://localhost:3107**. Express serves both the built frontend and the API.
+Open **http://localhost:3107**. Next.js serves both the built React frontend and the API. Set the `PORT` environment variable to override the production port.
 
 ## Demo in two minutes
 
@@ -51,7 +51,7 @@ For a non-match, `matched` and `createdMatch` are false and `match` is null. Rep
 ## Privacy and persistence
 
 - There are **32 fictional adult profiles** with name, age, photo, bio, city, college, and interests.
-- Incoming likes exist exclusively in `server/profiles.js`. They are never sent as a feed flag, count, badge, or separate endpoint. This server file is not part of the frontend bundle.
+- Incoming likes exist exclusively in `server/profiles.js`. They are never sent as a feed flag, count, badge, or separate endpoint. Only the Next.js backend imports this server file; it is not part of the frontend bundle.
 - `publicProfile()` explicitly allows only public profile fields, protecting against accidental future serialization of private fields.
 - A match requires both an outgoing `like` and a server-side incoming like. A pass cannot produce a match, even if the other person liked the user.
 - Swipes and matches persist in `data/state.json`, which is created on the first swipe. API responses use `Cache-Control: no-store`.
@@ -69,11 +69,20 @@ npm test
 npm run build
 ```
 
-The 11 automated backend tests cover complete seed data, explicit public-field serialization, private incoming likes, mutual matching, one-sided likes, passes, idempotency, conflicting retries, invalid requests, persistence across app instances, concurrent writes, feed exhaustion, and corrupt data.
+The 13 automated backend tests cover complete seed data, explicit public-field serialization, private incoming likes, mutual matching, one-sided likes, passes, idempotency, conflicting retries, invalid and oversized requests, response caching, persistence across handler instances, concurrent writes, feed exhaustion, and corrupt data.
+
+To verify the real Next.js production app in a headless browser, install Chrome or Edge and run:
+
+```sh
+npm run build
+npm run test:browser
+```
+
+The 10 browser checks use isolated JSON storage and cover all portraits, one-card rendering, responsive widths, desktop buttons, keyboard controls, actual mobile touch gestures, swipe feedback, match notification, Matches, reload persistence, failed-swipe retry, blank Home, reduced motion, and the empty feed. They leave screenshots and a report in the ignored `.taste-skill/` folder. Set `CHROME_PATH` if the browser is installed in a custom location.
 
 ## Deploy
 
-Any Node-capable host can run `npm ci && npm run build` as the build step and `npm start` as the start command. Set `PORT` if the host provides one. Set `DATA_FILE` to a writable path on a **persistent disk**, for example `/var/data/coy-state.json`.
+Any Node-capable host can run `npm ci && npm run build` as the build step and `npm start` as the start command. Set `PORT` if the host provides one. Set `DATA_FILE` to a writable path on a **persistent disk**, for example `/var/data/coy-state.json`. This is a full Next.js server build, not a static export: the route handlers need Node.js and writable persistent storage.
 
 Do not use an ephemeral or read-only serverless filesystem when persistence is required. Use a single long-running service with durable storage. For Docker:
 
@@ -91,11 +100,12 @@ See `SUBMISSION_CHECKLIST.md` for the remaining Part B submission steps. Part A'
 ## Project structure
 
 ```text
-src/             React UI, drag gestures, animations, match dialog
-server/          Express API, public seed profiles, private incoming likes, JSON store
+app/             Next.js layout/page and /feed, /swipe, /matches, /health route handlers
+src/             React client UI, drag gestures, animations, match dialog
+server/          Matching service, request handlers, public seed profiles, private incoming likes, JSON store
 tests/           Isolated backend integration tests
 public/          Bundled portraits, fonts, and icons
-scripts/         Development launcher and explicit demo reset
+scripts/         Production launcher, browser verification, and explicit demo reset
 ```
 
 Asset provenance and font licenses are documented in `ASSETS.md` and `public/fonts/`.

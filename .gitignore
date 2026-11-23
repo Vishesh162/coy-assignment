@@ -1,9 +1,13 @@
 node_modules/
 dist/
+.next/
+out/
+next-env.d.ts
 data/*.json
 data/*.tmp
 data/*.lock
 work/
 .taste-skill/
-.env
+.env*
+!.env.example
 .DS_Store

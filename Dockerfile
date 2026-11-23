@@ -12,8 +12,10 @@ ENV PORT=3107
 ENV DATA_FILE=/app/data/state.json
 COPY package*.json ./
 RUN npm ci --omit=dev && mkdir -p /app/data && chown node:node /app/data
-COPY --from=builder /app/dist ./dist
-COPY server ./server
+COPY --from=builder --chown=node:node /app/.next ./.next
+COPY --from=builder /app/public ./public
+COPY next.config.mjs ./
+COPY scripts/start.mjs ./scripts/start.mjs
 USER node
 EXPOSE 3107
 VOLUME /app/data

@@ -1,3 +1,5 @@
+'use client';
+
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { ArrowLeft, ArrowRight, Compass, Heart, Home, LockKeyhole, MapPin, Sparkles, X, Check, GraduationCap, LoaderCircle, EyeOff, UserRoundPlus } from 'lucide-react';
 

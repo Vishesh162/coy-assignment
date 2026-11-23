@@ -2,9 +2,9 @@
 
 ## Files are ready
 
-- React frontend with blank Home and working Discover tabs.
+- React frontend hosted by Next.js, with blank Home and working Discover tabs.
 - 32 mock profiles and local placeholder portraits.
-- Express APIs: `GET /feed`, `POST /swipe`, `GET /matches`.
+- Next.js route handlers: `GET /feed`, `POST /swipe`, `GET /matches`.
 - Mobile dragging, desktop buttons, and keyboard controls.
 - Mutual-match notification and Matches view.
 - Persisted swipes and matches, with no recycled profiles.
