@@ -1,0 +1,9 @@
+node_modules/
+dist/
+data/*.json
+data/*.tmp
+data/*.lock
+work/
+.taste-skill/
+.env
+.DS_Store
